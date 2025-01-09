@@ -1,7 +1,10 @@
 import { Entity, ObjectId, ObjectIdColumn, Column } from "typeorm"
 
-@Entity('Schools')
-export class School {
+@Entity('Groups')
+export class Group {
+
+    @ObjectIdColumn()
+    _id: ObjectId | undefined
 
     @Column()
     id: Number
@@ -13,5 +16,5 @@ export class School {
     nametag: String | undefined
 
     @Column()
-    groupId: String | undefined
+    schoolId: Number
 }

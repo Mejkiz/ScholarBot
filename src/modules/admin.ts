@@ -1,10 +1,7 @@
 import { Menu, MenuRange } from "@grammyjs/menu";
 import { bot } from "../misc/connections";
-const SchoolDatabase = [
-    {name:"Могойтинская СОШ", id:"mogoyto-school"},
-    {name:"Курумканская СОШ №1", id:"kyrymkan-school-1"},
-    {name:"Курумканская СОШ №2", id:"kyrymkan-school-2"}
-]
+import { DBFunc } from "../database/func/funct";
+let db = new DBFunc()
 
 export class Admin {
     menu: any;
@@ -15,7 +12,7 @@ export class Admin {
     admin_my_school: any;
     constructor() {
         this.menu = new Menu("admin-menu")
-            .submenu("Школы", "admin-schools", async ctx => {
+            .submenu("Школы", "admin-classes", async ctx => {
                 await ctx.editMessageText('Школы:')
             })
             .submenu("Статистика", "admin-statistics", async ctx => {
@@ -30,15 +27,19 @@ export class Admin {
             .submenu("Моя школа", "admin-my-school")
         bot.use(this.menu)
 
-        this.admin_schools = new Menu("admin-schools")
-            .dynamic(() => {
+        this.admin_schools = new Menu("admin-classes")
+            .dynamic(async () => {
+                let SchoolDatabase = (await db.getSchools())
+                console.log(SchoolDatabase)
                 const range = new MenuRange();
                 for (let i = 0; i < SchoolDatabase.length; i++) {
                     range
-                        .submenu({text: SchoolDatabase[i].name, payload: SchoolDatabase[i].id},SchoolDatabase[i].id, (ctx)=> {
-                            ctx.editMessageText(`Вы выбрали школу "${SchoolDatabase[i].name}". Функция находится в разработке (SAD)`)
-                        })
+                    .submenu({text: (SchoolDatabase[i].Name ?? "").toString(), payload: (SchoolDatabase[i].Name ?? "").toString()}, (SchoolDatabase[i].Name ?? "").toString(), (ctx)=> {
+                        ctx.editMessageText(`Вы выбрали школу "${SchoolDatabase[i].Name}". Функция находится в разработке (SAD)`)
+                    })
+
                         .row()
+                    //this.menu.register()
                 }
                 return range;
             })
@@ -60,10 +61,13 @@ export class Admin {
         this.menu.register(this.admin_control)
 
         this.admin_server = new Menu("admin-server")
-            .text({text:"xdd", payload: Date.now().toString()},
-            async (ctx) => {
-                await ctx.answerCallbackQuery("Тест");
-            })
+            .text({ text: "xdd", payload: Date.now().toString() },
+                async (ctx) => {
+                    await ctx.answerCallbackQuery({
+                        text: 'Test',
+                        show_alert: true, 
+                    });
+                })
             .back('Назад', async ctx => {
                 await ctx.editMessageText('Меню:')
             })

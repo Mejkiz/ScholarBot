@@ -1,4 +1,4 @@
-import { Bot, Context } from "grammy";
+import { Bot, Context, session, MemorySessionStorage, SessionFlavor } from "grammy";
 import { Menu } from "@grammyjs/menu";
 import { config } from "../config";
 import { Admin } from "../modules/admin.js"
@@ -8,9 +8,17 @@ interface BotConfig {
     isDeveloper: boolean;
 }
 
-type MyContext = Context & {
+interface SessionData {
+    step: string;
+    data: Record<string, any>;
+    timeoutHandle: NodeJS.Timeout | null;
+    editMsgId: number | null
+}
+
+
+export type MyContext = Context & {
     config: BotConfig;
-};
+} & SessionFlavor<SessionData>;
 let db = new DataBase()
 
 db.connect()
@@ -24,9 +32,12 @@ bot.use(async (ctx, next) => {
     await next();
 });
 
-export class Connections {
-    test: any
-    constructor() {
-        this.test = {}
-    }
-}
+bot.use(session({
+    initial: (): SessionData => ({
+        step: '',
+        data: {},
+        timeoutHandle: null,
+        editMsgId: null,
+    }),
+}));
+
