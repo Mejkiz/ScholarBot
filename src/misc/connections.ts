@@ -1,7 +1,7 @@
 import { Bot, Context, session, MemorySessionStorage, SessionFlavor } from "grammy";
 import { Menu } from "@grammyjs/menu";
 import { config } from "../config";
-import { Admin } from "../modules/admin.js"
+import { Admin } from "../roles/admin.js"
 import { DataBase } from "../database/db";
 
 interface BotConfig {

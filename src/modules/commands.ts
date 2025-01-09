@@ -1,9 +1,9 @@
 import { Menu, MenuRange } from "@grammyjs/menu";
 import { MyContext } from "../misc/connections";
 import { DBFunc } from "../database/func/funct";
-import { Admin } from "../modules/admin.js"
-import editor from "../modules/editor"
-import creator from "../modules/creator"
+import { Admin } from "../roles/admin.js"
+import editor from "../roles/editor"
+import creator from "../roles/creator"
 import { bot } from "../misc/connections"
 
 let admin = new Admin()

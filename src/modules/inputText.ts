@@ -1,7 +1,7 @@
 import { Menu, MenuRange } from "@grammyjs/menu";
 import { bot } from "../misc/connections";
 import { MyContext } from "../misc/connections";
-import {confirm_edit_school_name_menu} from "./creator";
+import {confirm_edit_school_name_menu} from "../roles/creator";
 
 bot.on('message', async (ctx) => {
     await ctx.api.deleteMessage(ctx.chat.id, ctx.msgId)
