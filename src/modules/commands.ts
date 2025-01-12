@@ -1,13 +1,12 @@
 import { Menu, MenuRange } from "@grammyjs/menu";
 import { MyContext } from "../misc/connections";
-import { DBFunc } from "../database/func/funct";
+import db from "../database/func/funct";
 import { Admin } from "../roles/admin.js"
 import editor from "../roles/editor"
 import creator from "../roles/creator"
 import { bot } from "../misc/connections"
 
 let admin = new Admin()
-let db = new DBFunc()
 
 bot.command("start", async (ctx) => {
   if (["group", "supergroup"].includes(ctx.update.message?.chat.type || '')) return await ctx.reply("Это группа!")

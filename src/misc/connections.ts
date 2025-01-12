@@ -1,7 +1,5 @@
 import { Bot, Context, session, MemorySessionStorage, SessionFlavor } from "grammy";
-import { Menu } from "@grammyjs/menu";
 import { config } from "../config";
-import { Admin } from "../roles/admin.js"
 import { DataBase } from "../database/db";
 
 interface BotConfig {
@@ -12,7 +10,8 @@ interface SessionData {
     step: string;
     data: Record<string, any>;
     timeoutHandle: NodeJS.Timeout | null;
-    editMsgId: number | null
+    editMsgId: number | null;
+    subjectEditId: Number | null;
 }
 
 
@@ -38,6 +37,7 @@ bot.use(session({
         data: {},
         timeoutHandle: null,
         editMsgId: null,
+        subjectEditId: null
     }),
 }));
 

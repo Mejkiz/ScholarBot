@@ -1,7 +1,6 @@
 import { Menu, MenuRange } from "@grammyjs/menu";
 import { bot } from "../misc/connections";
-import { DBFunc } from "../database/func/funct";
-let db = new DBFunc()
+import db from "../database/func/funct";
 
 export class Admin {
     menu: any;

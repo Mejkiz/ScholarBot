@@ -16,7 +16,7 @@ export class Homework {
     editorId: Number
 
     @Column()
-    item: String
+    itemId: Number
 
     @Column()
     text: String
