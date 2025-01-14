@@ -1,7 +1,9 @@
 import { Menu, MenuRange } from "@grammyjs/menu";
 import { bot } from "../misc/connections";
+import { config } from "../config";
 import { MyContext } from "../misc/connections";
 import db from "../database/func/funct";
+let dayList = config.data.dayList
 
 const menu = new Menu<MyContext>("creator-menu")
     .submenu("Управление классом", "creator-edit-school", async ctx => {
@@ -224,7 +226,14 @@ const creator_edit_items_back = new Menu<MyContext>("creator-edit-items-back")
         ctx.editMessageText("Создавайте, редактируйте и удаляйте предметы ниже")
     })
 
-creator_edit_item.register(creator_edit_items_back)
+creator_edit_items.register(creator_edit_items_back)
+
+const creator_edit_item_back = new Menu<MyContext>("creator-edit-item-back")
+    .back("Назад", async (ctx) => {
+        ctx.editMessageText("Создавайте, редактируйте и удаляйте предметы ниже")
+    })
+
+creator_edit_items.register(creator_edit_item_back)
 
 export const confirm_add_new_item = new Menu<MyContext>('confirm-add-new-item')
     .text('Подтвердить', async (ctx) => {
@@ -244,11 +253,17 @@ export const confirm_add_new_item = new Menu<MyContext>('confirm-add-new-item')
         if (ctx.session.timeoutHandle) {
             clearTimeout(ctx.session.timeoutHandle);
         }
-        let msg = await ctx.editMessageText(`Текущее имя предмета: ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.subjectEditId || 0))?.Name}\nНапишите новое имя в течении 5 минут!`, { reply_markup: creator_edit_items_back })
-        ctx.session.step = "edit-item-name"
+        let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
+        let nameSchool = (await db.getSchoolById(userSchoolId || 0))?.Name
+        if (typeof nameSchool !== "string") return await ctx.reply("Ошибка: У тебя нет класса")
+        const msg = await ctx.editMessageText(`Введите имя нового предмета, на это у вас есть 5 минут.\n Что бы отменить нажминте кнопку "Назад" ниже`, { reply_markup: creator_edit_items_back })
+        if (ctx.session.timeoutHandle) {
+            clearTimeout(ctx.session.timeoutHandle);
+        }
+        ctx.session.step = "create-item"
         if (msg !== true) ctx.session.editMsgId = msg.message_id || null
         ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'edit-item-name') {
+            if (ctx.session.step == 'create-item') {
                 ctx.session.step = '';
                 ctx.session.data = {};
                 if (ctx.chat?.id) {
@@ -256,9 +271,9 @@ export const confirm_add_new_item = new Menu<MyContext>('confirm-add-new-item')
                         ctx.chat.id,
                         ctx.session.editMsgId || 1,
                         `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: creator_edit_item }
+                        { reply_markup: undefined }
                     );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_item });
+                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_menu });
             }
         }, 5 * 60 * 1000); // 5 минут
     })
@@ -322,10 +337,72 @@ creator_edit_item.register(confirm_remove_item)
 //
 
 const creator_edit_schedule = new Menu<MyContext>("creator-edit-schedule")
+    .dynamic(async (ctx: MyContext) => {
+        const range = new MenuRange<MyContext>();
+        for (let i = 0; i < dayList.length; i++) {
+            range
+                .text(dayList[i], async (ctx) => {
+                    ctx.session.data.dayId = i;
+                    let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
+                    if (!await db.checkDay(userSchoolId, i)) await db.createDay(userSchoolId, i, dayList[i], ([0, 6].includes(i) ? false : true))
+                    ctx.editMessageText(`Вы выбрали - ${dayList[i]}.\nВыберите что хотите изменить`, { reply_markup: creator_edit_schedule_day })
+                })
+                .row()
+        }
+        return range;
+    })
     .back('Назад', async ctx => {
         await ctx.editMessageText('Выберите что хотите поменять')
     })
+
 creator_edit_school.register(creator_edit_schedule)
+
+const creator_edit_schedule_day = new Menu<MyContext>("creator-edit-schedule-day")
+    .text(
+        async (ctx) => `Учебный день: ${(await db.getDayById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.data.dayId))?.isStudy ? "✅" : "❌"}`,
+        async (ctx) => {
+            let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
+            let isStudy = (await db.getDayById(userSchoolId, ctx.session.data.dayId))?.isStudy
+            await db.editDay(userSchoolId, ctx.session.data.dayId, { isStudy: !isStudy })
+            await ctx.editMessageText(`Вы выбрали - ${dayList[ctx.session.data.dayId]}.\nВыберите что хотите изменить`, { reply_markup: creator_edit_schedule_day })
+        }
+    )
+    .row()
+    .text("Изменить расписание", async (ctx) => {
+        ctx.editMessageText(`День недели: ${dayList[ctx.session.data.dayId]}\nИзменяйте расписание используя кнопки ниже`, { reply_markup: creator_edit_schedule_items_day })
+    })
+    .back("Назад", async (ctx) => {
+        ctx.session.data = {}
+        ctx.editMessageText("Выберите день недели который хотите изменить")
+    })
+
+creator_edit_schedule.register(creator_edit_schedule_day)
+
+const creator_edit_schedule_items_day = new Menu<MyContext>("creator-edit-schedule-items-day")
+    .dynamic(async (ctx: MyContext) => {    
+        const range = new MenuRange<MyContext>();
+        let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
+        let lessonsDay = await db.getLessonsDay({ schoolId: userSchoolId, dayId: ctx.session.data.dayId })
+        console.log(lessonsDay)
+        // for (let i = 0; i < lessonsDay.length; i++) {
+        //     range
+        //         .text(dayList[i], async (ctx) => {
+        //             ctx.session.data.dayId = i;
+        //             if (!await db.checkDay(userSchoolId, i)) await db.createDay(userSchoolId, i, dayList[i], ([0, 6].includes(i) ? false : true))
+        //             ctx.editMessageText(`Вы выбрали - ${dayList[i]}.\nВыберите что хотите изменить`, { reply_markup: creator_edit_schedule_day })
+        //         })
+        //         .row()
+        // }
+        return range;
+    })
+    .submenu("+ Ячейка", "1", async (ctx) => {
+
+    })
+    .back('Назад', async ctx => {
+        await ctx.editMessageText(`Вы выбрали - ${dayList[ctx.session.data.dayId]}.\nВыберите что хотите изменить`)
+    })
+
+creator_edit_schedule_day.register(creator_edit_schedule_items_day)
 
 const creator_edit_hw = new Menu<MyContext>("creator-edit-hw")
     .back('Назад', async ctx => {

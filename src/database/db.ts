@@ -5,12 +5,14 @@ import { School } from "./entities/school";
 import { Group } from "./entities/group";
 import { Homework } from "./entities/homework";
 import { Item } from "./entities/item";
+import { Day } from "./entities/day";
+import { Lesson } from "./entities/lesson";
 
 export const appDataSource = new DataSource({
     type: "mongodb",
     url: config.auth.mongo.url,
     database: config.auth.mongo.database,
-    entities: [User, School, Group, Homework, Item]
+    entities: [User, School, Group, Homework, Item, Day, Lesson]
 })
 
 export class DataBase {
