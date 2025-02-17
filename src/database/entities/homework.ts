@@ -19,8 +19,8 @@ export class Homework {
     itemId: Number
 
     @Column()
-    text: String
+    text: String | null
 
     @Column()
-    date: Date
+    date: Number
 }

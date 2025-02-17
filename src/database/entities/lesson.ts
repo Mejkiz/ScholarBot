@@ -10,7 +10,7 @@ export class Lesson {
     id: Number  
 
     @Column()
-    itemId: Number
+    itemId: Number | null
 
     @Column()
     schoolId: Number 

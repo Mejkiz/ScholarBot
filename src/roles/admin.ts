@@ -29,7 +29,6 @@ export class Admin {
         this.admin_schools = new Menu("admin-classes")
             .dynamic(async () => {
                 let SchoolDatabase = (await db.getSchools())
-                console.log(SchoolDatabase)
                 const range = new MenuRange();
                 for (let i = 0; i < SchoolDatabase.length; i++) {
                     range
@@ -86,4 +85,3 @@ export class Admin {
     }
 
 }
-

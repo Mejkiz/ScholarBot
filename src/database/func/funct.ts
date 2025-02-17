@@ -5,6 +5,7 @@ import { School } from "../entities/school";
 import { Item } from "../entities/item";
 import { Day } from "../entities/day";
 import { Lesson } from "../entities/lesson";
+import { Homework } from "../entities/homework";
 
 export default {
     // USER
@@ -13,21 +14,26 @@ export default {
     },
 
     async createuser(Author: IUser, role: string, schoolId: Number) {
-        if (await this.checkuser(Author)) return console.error(new Error("Такой юзер уже существует!"))
+        if (await this.checkuser(Author.id)) return console.error(new Error("Такой юзер уже существует!"))
         let user = new User()
         user = { _id: undefined, firstName: Author.first_name, lastName: Author?.last_name || undefined, id: Author.id, nametag: Author?.username || undefined, role: role, schoolId }
         await appDataSource.getRepository(User).save(user)
     },
 
-    async checkuser(Author: IUser) {
-        return await this.getUserById(Author.id) != null ? true : false
+    async checkuser(userId: number) {
+        return await this.getUserById(userId) != null ? true : false
     },
 
-    async edituser(Author: IUser, tochange: any) {
-        if (!await this.checkuser(Author)) return console.error(new Error("Такой юзер не существует!"))
-        await appDataSource.getRepository(User).update({ id: Author.id }, tochange)
+    async edituser<User>(id: number, update: Partial<User>): Promise<void> {
+        if (!await this.checkuser(id)) return console.error(new Error("Такой юзер не существует!"))
+        await appDataSource.getRepository(User).update({ id: id }, update)
     },
 
+    async hasUserSchool(userId: number) {
+        const user = await this.getUserById(userId);
+        return user?.schoolId ? true : false;
+    },
+    
     // SCHOOL 
 
     async createSchool(name: string | undefined, nametag: String | undefined, groupId: Number | undefined) {
@@ -42,6 +48,10 @@ export default {
 
     async getSchoolById(id: Number) {
         return await appDataSource.getRepository(School).findOneBy({ id })
+    },
+
+    async getSchoolBy<School>(atribute: Partial<School>) {
+        return await appDataSource.getRepository(School).find(atribute)
     },
 
     async editSchool<School>(id: Number, update: Partial<School>): Promise<void> {
@@ -59,6 +69,10 @@ export default {
         return await appDataSource.getRepository(Item).find()
     },
 
+    async getItemsBySchool<Item>(atribute: Partial<Item>) {
+        return await appDataSource.getRepository(Item).find(atribute)
+    },
+
     async getItemById(schoolId: Number, id: Number) {
         return await appDataSource.getRepository(Item).findOneBy({ schoolId, id })
     },
@@ -73,14 +87,18 @@ export default {
 
     // DAY
     async createDay(schoolId: Number, dayId: Number, Name: String, isStudy: Boolean) {
-        if (await this.getDayById(schoolId, dayId)) return console.error(new Error("Такой юзер уже существует!"))
+        if (await this.getDayById(schoolId, dayId)) return console.error(new Error("Такой день уже существует!"))
         let day = new Day()
-        day = { _id: undefined, id: (await this.getItems()).length + 1, schoolId, dayId, Name, isStudy }
+        day = { _id: undefined, id: (await this.getDays()).length + 1, schoolId, dayId, Name, isStudy }
         await appDataSource.getRepository(Day).save(day)
     },
 
     async getDays() {
         return await appDataSource.getRepository(Day).find()
+    },
+
+    async getDaysBy<Day>(atribute: Partial<Day>) {
+        return await appDataSource.getRepository(Day).find(atribute)
     },
 
     async getDayById(schoolId: Number, dayId: Number) {
@@ -96,9 +114,9 @@ export default {
     },
 
     // LESSON
-    async createLesson(schoolId: Number, itemId: Number, dayId: Number, num:Number, isEmpty: Boolean) {
+    async createLesson(schoolId: Number, itemId: Number | null, dayId: Number, num: Number, isEmpty: Boolean) {
         let lesson = new Lesson()
-        lesson = { _id: undefined, id: (await this.getItems()).length + 1, schoolId, itemId, dayId, num, isEmpty }
+        lesson = { _id: undefined, id: (await this.getLessons()).length + 1, schoolId, itemId, dayId, num, isEmpty }
         await appDataSource.getRepository(Lesson).save(lesson)
     },
 
@@ -118,7 +136,29 @@ export default {
     //     return await this.getDayById(schoolId, dayId) != null ? true : false
     // },
 
-    // async editDay<Day>(schoolId: Number, dayId: Number, update: Partial<Day>): Promise<void> {
-    //     await appDataSource.getRepository(Day).update({ dayId, schoolId }, update)
-    // },
+    async deleteLesson(schoolId: Number, id: Number) {
+        await appDataSource.getRepository(Lesson).delete({ id, schoolId })
+    },
+
+    async editLesson<Lesson>(schoolId: Number, id: Number, update: Partial<Lesson>): Promise<void> {
+        await appDataSource.getRepository(Lesson).update({ schoolId, id }, update)
+    },
+
+    async addHomework(schoolId: Number, itemId: Number, editorId: Number, text: String | null) {
+        let hw = new Homework()
+        hw = { _id: undefined, id: (await this.getHomeworks()).length + 1, schoolId, itemId, editorId, text, date: Date.now() }
+        await appDataSource.getRepository(Homework).save(hw)
+    },
+
+
+    async getlastHomework(schoolId: Number, itemId: Number) {
+        return await appDataSource.getRepository(Homework).findOne({
+            where: { schoolId, itemId },
+            order: { date: 'DESC' },
+        });
+    },
+
+    async getHomeworks() {
+        return await appDataSource.getRepository(Homework).find()
+    },
 }
