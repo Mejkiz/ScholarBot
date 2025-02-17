@@ -21,10 +21,16 @@ bot.command("start", async (ctx) => {
   await ctx.reply("У тебя нет доступа к этому боту!");
 });
 
-// bot.command("test", async (ctx) => {
-//   console.log(await ctx.getAuthor())
-//   console.log(await db.getUserById(((await ctx.getAuthor()).user.id)))
-// });
+
+bot.command("give", async (ctx) => {
+  if (!ctx.config.isDeveloper) return
+  console.log(await db.createuser((await ctx.getAuthor()).user, "cretor", 1))
+});
+
+bot.command("admin_cmd", async (ctx) => {
+  if (!ctx.config.isDeveloper) return
+  if (["group", "supergroup"].includes(ctx.update.message?.chat.type || '')) await db.createSchool(ctx.update.message?.chat.title, ctx.update.message?.chat?.username, ctx.update.message?.chat?.id)
+});
 
 bot.command(["hw", "dz", "дз", "homework"], async (ctx) => {
   let userId;
