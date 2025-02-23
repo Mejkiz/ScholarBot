@@ -9,16 +9,26 @@ moment.locale('ru');
 import { all } from "axios";
 let dayList = config.data.dayList
 
+async function hasAccess(ctx: MyContext): Promise<boolean> {
+    const user = await db.getUserById(ctx.chat?.id || 0);
+    if (!user) return false;
+
+    return user?.role == "creator" 
+}
+
 const menu = new Menu<MyContext>("creator-menu")
     .submenu("Управление классом", "creator-edit-school", async ctx => {
+        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Выберите что хотите поменять')
     })
     .row()
     .submenu("Управление Д/З", "creator-edit-hw", async ctx => {
+        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Выберите предмет на который хотите записать д/з')
     })
     .row()
     .submenu("Д/З на завтра", "creator-get-hw", async ctx => {
+        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
         let day = new Date().getDay()
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
         const allDays = (await db.getDaysBy({ schoolId: userSchoolId })).filter(e => e.isStudy == true).map(e => Number(e.dayId))
@@ -29,7 +39,7 @@ const menu = new Menu<MyContext>("creator-menu")
             hwDay = day + 1
         }
         let lessonList = (await db.getLessonsDay({ schoolId: userSchoolId, dayId: hwDay })).filter(e => e.isEmpty == false).filter(e => allDays.includes(Number(e.dayId)) == true).sort((a, b) => Number(a.num) - Number(b.num)).map(e => e.itemId)
-        let reply = `Д/З на ${moment().weekday(hwDay).format('dd')}:\n\n`
+        let reply = `Д/З на ${moment().weekday(hwDay-1).format('dd')}:\n\n`
         for (const id of lessonList) {
             let lesson = await db.getItemById(userSchoolId, Number(id));
             reply += `${lesson?.Name}: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\n`
@@ -37,13 +47,16 @@ const menu = new Menu<MyContext>("creator-menu")
         await ctx.editMessageText(reply)
     })
     .submenu("Списки", "creator-lists", async ctx => {
+        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Списки:')
     })
     .submenu("Книги", "creator-books", async ctx => {
+        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Список книг:\n(для добавления напишите вашему администратору, раздел находится в разработке)')
     })
     .row()
     .submenu("Аккаунт", "creator-account", async ctx => {
+        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Аккаунт:')
     })
 bot.use(menu)

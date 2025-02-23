@@ -9,6 +9,9 @@ import { bot } from "../misc/connections"
 import moment from 'moment';
 import 'moment/locale/ru';
 moment.locale('ru');
+// // for test
+// import { appDataSource } from "../database/db";
+// import { Item } from "../database/entities/item";
 
 let admin = new Admin()
 
@@ -24,7 +27,7 @@ bot.command("start", async (ctx) => {
 
 bot.command("give", async (ctx) => {
   if (!ctx.config.isDeveloper) return
-  console.log(await db.createuser((await ctx.getAuthor()).user, "cretor", 1))
+  console.log(await db.createuser((await ctx.getAuthor()).user, "creator", 1))
 });
 
 bot.command("admin_cmd", async (ctx) => {
@@ -44,12 +47,12 @@ bot.command(["hw", "dz", "дз", "homework"], async (ctx) => {
   const allDays = (await db.getDaysBy({ schoolId: userSchoolId })).filter(e => e.isStudy == true).map(e => Number(e.dayId))
   let hwDay;
   if (!allDays.includes(day) || hwDay == Math.max.apply(null, allDays)) {
-    hwDay = 1
+    hwDay = allDays[0]
   } else {
     hwDay = day + 1
   }
   let lessonList = (await db.getLessonsDay({ schoolId: userSchoolId, dayId: hwDay })).filter(e => e.isEmpty == false).filter(e => allDays.includes(Number(e.dayId)) == true).sort((a, b) => Number(a.num) - Number(b.num)).map(e => e.itemId)
-  let reply = `Д/З на ${moment().weekday(hwDay).format('dd')}:\n\n`
+  let reply = `Д/З на ${moment().weekday(hwDay-1).format('dd')}:\n\n`
   for (const id of lessonList) {
     let lesson = await db.getItemById(userSchoolId, Number(id));
     reply += `${lesson?.Name}: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\n`
@@ -74,7 +77,7 @@ bot.command(["join"], async (ctx) => {
   await ctx.reply(`Успешно, теперь тебе доступны команды бота!`, { reply_parameters: { message_id: ctx.msg.message_id } })
 })
 
-// bot.command("test2", async (ctx) => {
-//   if (["group", "supergroup"].includes(ctx.update.message?.chat.type || '')) await db.createSchool(ctx.update.message?.chat.title, ctx.update.message?.chat?.username, ctx.update.message?.chat?.id)
-//   else return ctx.reply("Это не является группой!")
+// bot.command("test", async (ctx) => {
+//   let ret = (await appDataSource.getRepository(Item).find({order: { id: -1 }, take: 1}))[0].id 
+//   console.log(ret)
 // });
