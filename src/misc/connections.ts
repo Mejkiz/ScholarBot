@@ -9,9 +9,6 @@ interface BotConfig {
 interface SessionData {
     step: string;
     data: Record<string, any>;
-    timeoutHandle: NodeJS.Timeout | null;
-    editMsgId: number | null;
-    subjectEditId: Number | null;
 }
 
 
@@ -35,9 +32,6 @@ bot.use(session({
     initial: (): SessionData => ({
         step: '',
         data: {},
-        timeoutHandle: null,
-        editMsgId: null,
-        subjectEditId: null
     }),
 }));
 

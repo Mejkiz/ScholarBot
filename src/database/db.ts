@@ -7,12 +7,13 @@ import { Homework } from "./entities/homework";
 import { Item } from "./entities/item";
 import { Day } from "./entities/day";
 import { Lesson } from "./entities/lesson";
+import { Bell } from "./entities/bell";
 
 export const appDataSource = new DataSource({
     type: "mongodb",
     url: config.auth.mongo.url,
     database: config.auth.mongo.database,
-    entities: [User, School, Group, Homework, Item, Day, Lesson]
+    entities: [User, School, Group, Homework, Item, Day, Lesson, Bell]
 })
 
 export class DataBase {

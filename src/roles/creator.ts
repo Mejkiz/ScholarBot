@@ -13,33 +13,33 @@ async function hasAccess(ctx: MyContext): Promise<boolean> {
     const user = await db.getUserById(ctx.chat?.id || 0);
     if (!user) return false;
 
-    return user?.role == "creator" 
+    return user?.role == "creator"
 }
 
 const menu = new Menu<MyContext>("creator-menu")
     .submenu("Управление классом", "creator-edit-school", async ctx => {
-        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
+        if (!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Выберите что хотите поменять')
     })
     .row()
     .submenu("Управление Д/З", "creator-edit-hw", async ctx => {
-        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
+        if (!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Выберите предмет на который хотите записать д/з')
     })
     .row()
     .submenu("Д/З на завтра", "creator-get-hw", async ctx => {
-        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
-        let day = new Date().getDay()
+        if (!(await hasAccess(ctx))) return ctx.deleteMessage()
+        let day = new Date().getDay() + 1
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
         const allDays = (await db.getDaysBy({ schoolId: userSchoolId })).filter(e => e.isStudy == true).map(e => Number(e.dayId))
         let hwDay;
         if (!allDays.includes(day) || hwDay == Math.max.apply(null, allDays)) {
             hwDay = 1
         } else {
-            hwDay = day + 1
+            hwDay = day
         }
         let lessonList = (await db.getLessonsDay({ schoolId: userSchoolId, dayId: hwDay })).filter(e => e.isEmpty == false).filter(e => allDays.includes(Number(e.dayId)) == true).sort((a, b) => Number(a.num) - Number(b.num)).map(e => e.itemId)
-        let reply = `Д/З на ${moment().weekday(hwDay-1).format('dd')}:\n\n`
+        let reply = `Д/З на ${moment().weekday(hwDay - 1).format('dd')}:\n\n`
         for (const id of lessonList) {
             let lesson = await db.getItemById(userSchoolId, Number(id));
             reply += `${lesson?.Name}: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\n`
@@ -47,16 +47,16 @@ const menu = new Menu<MyContext>("creator-menu")
         await ctx.editMessageText(reply)
     })
     .submenu("Списки", "creator-lists", async ctx => {
-        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
+        if (!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Списки:')
     })
-    .submenu("Книги", "creator-books", async ctx => {
-        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
-        await ctx.editMessageText('Список книг:\n(для добавления напишите вашему администратору, раздел находится в разработке)')
-    })
+    // .submenu("Книги", "creator-books", async ctx => {
+    //     if (!(await hasAccess(ctx))) return ctx.deleteMessage()
+    //     await ctx.editMessageText('Список книг:\n(для добавления напишите вашему администратору, раздел находится в разработке)')
+    // })
     .row()
     .submenu("Аккаунт", "creator-account", async ctx => {
-        if(!(await hasAccess(ctx))) return ctx.deleteMessage()
+        if (!(await hasAccess(ctx))) return ctx.deleteMessage()
         await ctx.editMessageText('Аккаунт:')
     })
 bot.use(menu)
@@ -66,31 +66,17 @@ const creator_edit_school = new Menu<MyContext>("creator-edit-school")
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
         let nameSchool = (await db.getSchoolById(userSchoolId || 0))?.Name
         if (typeof nameSchool !== "string") return await ctx.reply("Ошибка: У тебя нет класса")
-        const msg = await ctx.editMessageText(`Текущее имя класса: ${nameSchool}\nВведите новое имя класса, у вас есть 5 минут.\n Что бы отменить нажминте кнопку "Назад" ниже`)
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
+        const msg = await ctx.editMessageText(`Текущее имя класса: ${nameSchool}\nВведите новое имя класса.\n Что бы отменить нажминте кнопку "Назад" ниже`)
         ctx.session.step = "edit-school-name"
-        if (msg !== true) ctx.session.editMsgId = msg.message_id || null
-        ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'edit-school-name') {
-                ctx.session.step = '';
-                ctx.session.data = {};
-                if (ctx.chat?.id) {
-                    return await ctx.api.editMessageText(
-                        ctx.chat.id,
-                        ctx.session.editMsgId || (msg != true ? msg.message_id : 0),
-                        `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: creator_edit_menu }
-                    );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_menu });
-            }
-        }, 5 * 60 * 1000); // 5 минут
+        if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
     })
-    .submenu("Группа", "creator-edit-group")
+    // .submenu("Группа", "creator-edit-group")
     .row()
     .submenu("Предметы", "creator-edit-items", async (ctx) => {
         await ctx.editMessageText("Создавайте, редактируйте и удаляйте предметы ниже")
+    })
+    .submenu("Звонки", "creator-edit-bell", async (ctx) => {
+        await ctx.editMessageText("Редактируйте расписание звонков ниже")
     })
     .submenu("Расписание", "creator-edit-schedule", async (ctx) => {
         ctx.editMessageText('Выберите день недели который хотите изменить')
@@ -103,13 +89,9 @@ menu.register(creator_edit_school)
 
 const creator_edit_menu = new Menu<MyContext>("creator-edit-menu")
     .back('Назад', async ctx => {
-        ctx.session.editMsgId = null;
+        ctx.session.data.editMsgId = null;
         ctx.session.data = {};
         ctx.session.step = '';
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-            ctx.session.timeoutHandle = null; // Очистим таймер после его удаления
-        }
         await ctx.editMessageText('Выберите что хотите поменять')
     })
 creator_edit_school.register(creator_edit_menu)
@@ -132,26 +114,9 @@ export const confirm_edit_school_name_menu = new Menu<MyContext>('confirm-edit-s
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
         let nameSchool = (await db.getSchoolById(userSchoolId || 0))?.Name
         if (typeof nameSchool !== "string") return await ctx.reply("Ошибка: У тебя нет класса")
-        const msg = await ctx.editMessageText(`Текущее имя класса: ${nameSchool}\nВведите новое имя класса, у вас есть 5 минут.\n Что бы отменить нажминте кнопку "Назад" ниже`, { reply_markup: creator_edit_menu })
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
+        const msg = await ctx.editMessageText(`Текущее имя класса: ${nameSchool}\nВведите новое имя класса.\n Что бы отменить нажминте кнопку "Назад" ниже`, { reply_markup: creator_edit_menu })
         ctx.session.step = "edit-school-name"
-        if (msg !== true) ctx.session.editMsgId = msg.message_id || null
-        ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'edit-school-name') {
-                ctx.session.step = '';
-                ctx.session.data = {};
-                if (ctx.chat?.id) {
-                    return await ctx.api.editMessageText(
-                        ctx.chat.id,
-                        ctx.session.editMsgId || 1,
-                        `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: creator_edit_menu }
-                    );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_menu });
-            }
-        }, 5 * 60 * 1000); // 5 минут
+        if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
     })
 
 creator_edit_menu.register(confirm_edit_school_name_menu)
@@ -174,7 +139,7 @@ const creator_edit_items = new Menu<MyContext>("creator-edit-items")
             range
                 .text(item.Name.toString(), (ctx) => {
                     ctx.editMessageText(`Предмет: ${item.Name.toString()}\nВыберите действие ниже`, { reply_markup: creator_edit_item });
-                    ctx.session.subjectEditId = item.id || null
+                    ctx.session.data.subjectEditId = item.id || null
                 })
                 .row();
         });
@@ -184,26 +149,9 @@ const creator_edit_items = new Menu<MyContext>("creator-edit-items")
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
         let nameSchool = (await db.getSchoolById(userSchoolId || 0))?.Name
         if (typeof nameSchool !== "string") return await ctx.reply("Ошибка: У тебя нет класса")
-        const msg = await ctx.editMessageText(`Введите имя нового предмета, на это у вас есть 5 минут.\n Что бы отменить нажминте кнопку "Назад" ниже`, { reply_markup: creator_edit_items_back })
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
+        const msg = await ctx.editMessageText(`Введите имя нового предмета.\n Что бы отменить нажминте кнопку "Назад" ниже`, { reply_markup: creator_edit_items_back })
         ctx.session.step = "create-item"
-        if (msg !== true) ctx.session.editMsgId = msg.message_id || null
-        ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'create-item') {
-                ctx.session.step = '';
-                ctx.session.data = {};
-                if (ctx.chat?.id) {
-                    return await ctx.api.editMessageText(
-                        ctx.chat.id,
-                        ctx.session.editMsgId || 1,
-                        `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: undefined }
-                    );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_menu });
-            }
-        }, 5 * 60 * 1000); // 5 минут
+        if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
     })
     .row()
     .back('Назад', async (ctx) => {
@@ -214,33 +162,16 @@ creator_edit_school.register(creator_edit_items);
 
 const creator_edit_item = new Menu<MyContext>("creator-edit-item")
     .text("Изменить имя", async (ctx) => {
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
-        let msg = await ctx.editMessageText(`Текущее имя предмета: ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.subjectEditId || 0))?.Name}\nНапишите новое имя в течении 5 минут!`, { reply_markup: creator_edit_items_back })
+        let msg = await ctx.editMessageText(`Текущее имя предмета: ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.data.subjectEditId || 0))?.Name}\nНапишите новое имя`, { reply_markup: creator_edit_items_back })
         ctx.session.step = "edit-item-name"
-        if (msg !== true) ctx.session.editMsgId = msg.message_id || null
-        ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'edit-item-name') {
-                ctx.session.step = '';
-                ctx.session.data = {};
-                if (ctx.chat?.id) {
-                    return await ctx.api.editMessageText(
-                        ctx.chat.id,
-                        ctx.session.editMsgId || 1,
-                        `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: creator_edit_item }
-                    );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_item });
-            }
-        }, 5 * 60 * 1000); // 5 минут
+        if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
     })
     .submenu("Удалить", "confirm-remove-item", async (ctx) => {
-        ctx.editMessageText(`Подтвердите что хотите удалить предмет - ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.subjectEditId || 0))?.Name}`)
+        ctx.editMessageText(`Подтвердите что хотите удалить предмет - ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.data.subjectEditId || 0))?.Name}`)
     })
     .row()
     .back("Назад", async (ctx) => {
-        ctx.session.subjectEditId = null
+        ctx.session.data.subjectEditId = null
         ctx.editMessageText("Создавайте, редактируйте и удаляйте предметы ниже")
     })
 
@@ -248,13 +179,9 @@ creator_edit_items.register(creator_edit_item)
 
 const creator_edit_items_back = new Menu<MyContext>("creator-edit-items-back")
     .back("Назад", async (ctx) => {
-        ctx.session.editMsgId = null;
+        ctx.session.data.editMsgId = null;
         ctx.session.data = {};
         ctx.session.step = '';
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-            ctx.session.timeoutHandle = null; // Очистим таймер после его удаления
-        }
         ctx.editMessageText("Создавайте, редактируйте и удаляйте предметы ниже")
     })
 
@@ -282,32 +209,12 @@ export const confirm_add_new_item = new Menu<MyContext>('confirm-add-new-item')
     })
     .text('Назад', async (ctx) => {
         delete ctx.session.data.itemName;
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
         let nameSchool = (await db.getSchoolById(userSchoolId || 0))?.Name
         if (typeof nameSchool !== "string") return await ctx.reply("Ошибка: У тебя нет класса")
-        const msg = await ctx.editMessageText(`Введите имя нового предмета, на это у вас есть 5 минут.\n Что бы отменить нажминте кнопку "Назад" ниже`, { reply_markup: creator_edit_items_back })
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
+        const msg = await ctx.editMessageText(`Введите имя нового предмета.\n Что бы отменить нажминте кнопку "Назад" ниже`, { reply_markup: creator_edit_items_back })
         ctx.session.step = "create-item"
-        if (msg !== true) ctx.session.editMsgId = msg.message_id || null
-        ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'create-item') {
-                ctx.session.step = '';
-                ctx.session.data = {};
-                if (ctx.chat?.id) {
-                    return await ctx.api.editMessageText(
-                        ctx.chat.id,
-                        ctx.session.editMsgId || 1,
-                        `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: undefined }
-                    );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_menu });
-            }
-        }, 5 * 60 * 1000); // 5 минут
+        if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
     })
 
 creator_edit_items.register(confirm_add_new_item)
@@ -319,7 +226,7 @@ export const confirm_edit_item_name_menu = new Menu<MyContext>('confirm-edit-ite
             await ctx.editMessageText(`Изменения сохранены.\nНовое имя предмета: ${confirmedItemName}`, { reply_markup: creator_edit_items_back });
             let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
             if (typeof userSchoolId !== "number") return ctx.reply("Ошибка: у тебя нет класса!")
-            await db.editItem(userSchoolId, ctx.session.subjectEditId || 0, { Name: confirmedItemName })
+            await db.editItem(userSchoolId, ctx.session.data.subjectEditId || 0, { Name: confirmedItemName })
             delete ctx.session.data.itemName;
         } else {
             await ctx.editMessageText('Ошибка: имя класса не найдено.');
@@ -327,26 +234,8 @@ export const confirm_edit_item_name_menu = new Menu<MyContext>('confirm-edit-ite
     })
     .text('Назад', async (ctx) => {
         delete ctx.session.data.itemName;
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
-        let msg = await ctx.editMessageText(`Текущее имя предмета: ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.subjectEditId || 0))?.Name}\nНапишите новое имя в течении 5 минут!`, { reply_markup: creator_edit_items_back })
+        let msg = await ctx.editMessageText(`Текущее имя предмета: ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.data.subjectEditId || 0))?.Name}\nНапишите новое имя`, { reply_markup: creator_edit_items_back })
         ctx.session.step = "edit-item-name"
-        if (msg !== true) ctx.session.editMsgId = msg.message_id || null
-        ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'edit-item-name') {
-                ctx.session.step = '';
-                ctx.session.data = {};
-                if (ctx.chat?.id) {
-                    return await ctx.api.editMessageText(
-                        ctx.chat.id,
-                        ctx.session.editMsgId || 1,
-                        `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: creator_edit_item }
-                    );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_item });
-            }
-        }, 5 * 60 * 1000); // 5 минут
     })
 
 creator_edit_menu.register(confirm_edit_item_name_menu)
@@ -355,14 +244,86 @@ const confirm_remove_item = new Menu<MyContext>('confirm-remove-item')
     .text('Подтвердить', async (ctx) => {
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
         if (typeof userSchoolId !== "number") return ctx.reply("Ошибка: у тебя нет класса!")
-        await db.deleteItem(userSchoolId, ctx.session.subjectEditId || 0)
+        await db.deleteItem(userSchoolId, ctx.session.data.subjectEditId || 0)
         await ctx.editMessageText(`Предмет удалён!`, { reply_markup: creator_edit_items_back });
     })
     .back('Назад', async (ctx) => {
-        ctx.editMessageText(`Предмет: ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.subjectEditId || 0))?.Name}\nВыберите действие ниже`)
+        ctx.editMessageText(`Предмет: ${(await db.getItemById((await db.getUserById(ctx.chatId || 0))?.schoolId || 0, ctx.session.data.subjectEditId || 0))?.Name}\nВыберите действие ниже`)
     })
 
 creator_edit_item.register(confirm_remove_item)
+
+//
+// РЕДАКТИРОВАНИЕ ЗВОНКОВ
+//
+// Осталось сделать редактирование (inputText), команду для группы, лс и кнопку креатору (После надо вводить бота в работу, тестить искать баги, на admin, editor пока пофиг, слишком много работы, дедлайн до апреля (можно просто скопировать вырезав "Управление классом"))
+//  
+
+const creator_edit_bell = new Menu<MyContext>("creator-edit-bell") // clone creator_edit_schedule_items_day
+    .dynamic(async (ctx: MyContext) => {
+        const range = new MenuRange<MyContext>();
+        let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
+        let listBells = await db.getBellsDay({ schoolId: userSchoolId })
+        for (const Bell of listBells) {
+            let itemName = Bell.isEmpty
+                ? `Урок №${Bell.num}`
+                : Bell.interval || 'Error';
+
+            range.text(itemName.toString(), async (ctx) => {
+                ctx.session.data.bellId = Bell.id;
+                let msg = await ctx.editMessageText(`Напишите новый период для ${Bell.num}-го урока`, { reply_markup: creator_edit_bell_back });
+                if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
+                ctx.session.step = 'edit-bell'
+            }).row();
+
+        }
+        return range;
+    })
+    .text("+ Ячейка", async (ctx) => {
+        let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
+        let num = (Number((await db.getBellsDay({ where: { schoolId: userSchoolId }, order: { id: -1 }, take: 1 }))[0]?.num) + 1) || 1
+        await db.createBell(userSchoolId, num, undefined)
+        ctx.editMessageText(`Редактируйте расписание звонков ниже`, { reply_markup: creator_edit_bell })
+    })
+    .back('Назад', async ctx => {
+        await ctx.editMessageText(`Выберите что хотите поменять`)
+    })
+
+
+creator_edit_school.register(creator_edit_bell)
+
+export const confirm_edit_bell = new Menu<MyContext>("confirm_edit_bell")
+    .text('Подтвердить', async (ctx) => {
+        let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId
+        let bell = (await db.getBellsDay({ schoolId: userSchoolId, id: ctx.session.data.bellId }))[0]
+        let confirmedBell = ctx.session.data.text_bell;
+        if (confirmedBell) {
+            await ctx.editMessageText(`Изменения сохранены.\nУрок №${bell.num}: ${confirmedBell}`, { reply_markup: creator_edit_bell_back });
+            if (typeof userSchoolId !== "number") return ctx.reply("Ошибка: у тебя нет класса!")
+            await db.editBell(userSchoolId, ctx.session.data.bellId, { interval: confirmedBell, isEmpty: false })
+            delete ctx.session.data.text_bell;
+            delete ctx.session.data.bellId;
+        } else {
+            await ctx.editMessageText('Ошибка: имя класса не найдено.');
+        }
+    })
+    .text('Назад', async (ctx) => {
+        delete ctx.session.data.text_bell;
+        let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
+        let bell = (await db.getBellsDay({ schoolId: userSchoolId, id: ctx.session.data.bellId }))[0]
+        let msg = await ctx.editMessageText(`Напишите новый период для ${bell.num}-го урока`, { reply_markup: creator_edit_bell_back })
+        ctx.session.step = "edit-bell"
+        if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
+    })
+creator_edit_bell.register(confirm_edit_bell)
+
+const creator_edit_bell_back = new Menu<MyContext>("creator-edit-bell-back")
+    .back("Назад", async (ctx) => {
+        ctx.session.data = {};
+        ctx.session.step = '';
+        ctx.editMessageText("Создавайте, редактируйте и удаляйте предметы ниже")
+    })
+creator_edit_bell.register(creator_edit_bell_back)
 
 //
 // РАСПИСАНИЕ
@@ -430,8 +391,8 @@ const creator_edit_schedule_items_day = new Menu<MyContext>("creator-edit-schedu
     })
     .text("+ Ячейка", async (ctx) => {
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
-        let lessonsDay = await db.getLessonsDay({ schoolId: userSchoolId, dayId: ctx.session.data.dayId })
-        await db.createLesson(userSchoolId, null, ctx.session.data.dayId, lessonsDay.length + 1, true)
+        let num = (Number((await db.getLessonsDay({ where: { schoolId: userSchoolId, dayId: ctx.session.data.dayId }, order: { id: -1 }, take: 1 }))[0]?.num) + 1) || 1
+        await db.createLesson(userSchoolId, null, ctx.session.data.dayId, num, true)
         ctx.editMessageText(`День недели: ${dayList[ctx.session.data.dayId]}\nИзменяйте расписание используя кнопки ниже`, { reply_markup: creator_edit_schedule_items_day })
     })
     .back('Назад', async ctx => {
@@ -487,12 +448,12 @@ const creator_edit_hw = new Menu<MyContext>("creator-edit-hw")
             range.text((lesson?.Name || "error").toString(), async (ctx) => {
                 ctx.session.step = "write-hw";
                 ctx.session.data.editlessonId = lesson?.id
-                let msg = await ctx.editMessageText(`${lesson?.Name}\nТекущее: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\nНапишите новое д/з в течении 5 минут!`, { reply_markup: creator_back_to_edit_hw })
-                if (msg !== true) ctx.session.editMsgId = msg.message_id || null
+                let msg = await ctx.editMessageText(`${lesson?.Name}\nТекущее: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\nНапишите новое д/з`, { reply_markup: creator_back_to_edit_hw })
+                if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
             }).row()
         }
         range.text('Другие', async (ctx) => {
-            ctx.editMessageText(`Выберите предмет на который хотите записать д/з`, { reply_markup: creator_edit_list_lesson})
+            ctx.editMessageText(`Выберите предмет на который хотите записать д/з`, { reply_markup: creator_edit_list_lesson })
         })
         return range
     })
@@ -503,7 +464,7 @@ menu.register(creator_edit_hw)
 
 const creator_back_to_edit_hw = new Menu<MyContext>("creator-back-to-edit-hw")
     .back('Назад', async ctx => {
-        ctx.session.editMsgId = null;
+        ctx.session.data.editMsgId = null;
         ctx.session.step = '';
         delete ctx.session.data.write_hw
         await ctx.editMessageText('Выберите предмет на который хотите записать д/з')
@@ -527,28 +488,11 @@ export const confirm_write_hw = new Menu<MyContext>("confirm_write_hw")
     })
     .text('Назад', async (ctx) => {
         delete ctx.session.data.text_hw;
-        if (ctx.session.timeoutHandle) {
-            clearTimeout(ctx.session.timeoutHandle);
-        }
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
         let lesson = await db.getItemById(userSchoolId, Number(ctx.session.data.editlessonId));
-        let msg = await ctx.editMessageText(`${lesson?.Name}\nТекущее: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\nНапишите новое д/з в течении 5 минут!`, { reply_markup: creator_back_to_edit_hw })
+        let msg = await ctx.editMessageText(`${lesson?.Name}\nТекущее: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\nНапишите новое д/з`, { reply_markup: creator_back_to_edit_hw })
         ctx.session.step = "write-hw"
-        if (msg !== true) ctx.session.editMsgId = msg.message_id || null
-        ctx.session.timeoutHandle = setTimeout(async () => {
-            if (ctx.session.step == 'write-hw') {
-                ctx.session.step = '';
-                ctx.session.data = {};
-                if (ctx.chat?.id) {
-                    return await ctx.api.editMessageText(
-                        ctx.chat.id,
-                        ctx.session.editMsgId || 1,
-                        `Время для ввода истекло. Пожалуйста, попробуйте снова.`,
-                        { reply_markup: creator_edit_hw }
-                    );
-                } else return await ctx.reply('Время для ввода истекло. Пожалуйста, попробуйте снова.', { reply_markup: creator_edit_hw });
-            }
-        }, 5 * 60 * 1000); // 5 минут
+        if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
     })
 creator_edit_hw.register(confirm_write_hw)
 
@@ -564,8 +508,8 @@ const creator_edit_list_lesson = new Menu<MyContext>("creator-edit-list-lesson")
             range.text((lesson?.Name || "error").toString(), async (ctx) => {
                 ctx.session.step = "write-hw";
                 ctx.session.data.editlessonId = lesson?.id
-                let msg = await ctx.editMessageText(`${lesson?.Name}\nТекущее: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\nНапишите новое д/з в течении 5 минут!`, { reply_markup: creator_back_to_edit_hw })
-                if (msg !== true) ctx.session.editMsgId = msg.message_id || null
+                let msg = await ctx.editMessageText(`${lesson?.Name}\nТекущее: ${(await db.getlastHomework(userSchoolId, Number(lesson?.id)))?.text || 'Нету'}\nНапишите новое д/з`, { reply_markup: creator_back_to_edit_hw })
+                if (msg !== true) ctx.session.data.editMsgId = msg.message_id || null
             }).row()
         }
         return range

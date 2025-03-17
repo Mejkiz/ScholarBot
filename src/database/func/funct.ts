@@ -6,6 +6,7 @@ import { Item } from "../entities/item";
 import { Day } from "../entities/day";
 import { Lesson } from "../entities/lesson";
 import { Homework } from "../entities/homework";
+import { Bell } from "../entities/bell";
 
 export default {
     // USER
@@ -33,12 +34,12 @@ export default {
         const user = await this.getUserById(userId);
         return user?.schoolId ? true : false;
     },
-    
+
     // SCHOOL 
 
     async createSchool(name: string | undefined, nametag: String | undefined, groupId: Number | undefined) {
         let school = new School()
-        school = { _id: undefined, id: (Number((await appDataSource.getRepository(School).find({order: { id: -1 }, take: 1}))[0]?.id ) + 1) || 1, Name: name, nametag, groupId }
+        school = { _id: undefined, id: (Number((await appDataSource.getRepository(School).find({ order: { id: -1 }, take: 1 }))[0]?.id) + 1) || 1, Name: name, nametag, groupId }
         await appDataSource.getRepository(School).save(school)
     },
 
@@ -61,7 +62,7 @@ export default {
     // ITEM
     async createItem(schoolId: Number | undefined, editorId: Number | undefined, Name: String) {
         let item = new Item()
-        item = { _id: undefined, id: (Number((await appDataSource.getRepository(Item).find({order: { id: -1 }, take: 1}))[0]?.id ) + 1) || 1, schoolId, editorId, Name }
+        item = { _id: undefined, id: (Number((await appDataSource.getRepository(Item).find({ order: { id: -1 }, take: 1 }))[0]?.id) + 1) || 1, schoolId, editorId, Name }
         await appDataSource.getRepository(Item).save(item)
     },
 
@@ -89,7 +90,7 @@ export default {
     async createDay(schoolId: Number, dayId: Number, Name: String, isStudy: Boolean) {
         if (await this.getDayById(schoolId, dayId)) return console.error(new Error("Такой день уже существует!"))
         let day = new Day()
-        day = { _id: undefined, id: (Number((await appDataSource.getRepository(Day).find({order: { id: -1 }, take: 1}))[0]?.id ) + 1) || 1, schoolId, dayId, Name, isStudy }
+        day = { _id: undefined, id: (Number((await appDataSource.getRepository(Day).find({ order: { id: -1 }, take: 1 }))[0]?.id) + 1) || 1, schoolId, dayId, Name, isStudy }
         await appDataSource.getRepository(Day).save(day)
     },
 
@@ -116,7 +117,7 @@ export default {
     // LESSON
     async createLesson(schoolId: Number, itemId: Number | null, dayId: Number, num: Number, isEmpty: Boolean) {
         let lesson = new Lesson()
-        lesson = { _id: undefined, id: (Number((await appDataSource.getRepository(Lesson).find({order: { id: -1 }, take: 1}))[0]?.id ) + 1) || 1, schoolId, itemId, dayId, num, isEmpty }
+        lesson = { _id: undefined, id: (Number((await appDataSource.getRepository(Lesson).find({ order: { id: -1 }, take: 1 }))[0]?.id) + 1) || 1, schoolId, itemId, dayId, num, isEmpty }
         await appDataSource.getRepository(Lesson).save(lesson)
     },
 
@@ -144,9 +145,11 @@ export default {
         await appDataSource.getRepository(Lesson).update({ schoolId, id }, update)
     },
 
+    // HOMEWORK
+
     async addHomework(schoolId: Number, itemId: Number, editorId: Number, text: String | null) {
         let hw = new Homework()
-        hw = { _id: undefined, id: (Number((await appDataSource.getRepository(Homework).find({order: { id: -1 }, take: 1}))[0]?.id ) + 1) || 1, schoolId, itemId, editorId, text, date: Date.now() }
+        hw = { _id: undefined, id: (Number((await appDataSource.getRepository(Homework).find({ order: { id: -1 }, take: 1 }))[0]?.id) + 1) || 1, schoolId, itemId, editorId, text, date: Date.now() }
         await appDataSource.getRepository(Homework).save(hw)
     },
 
@@ -160,5 +163,41 @@ export default {
 
     async getHomeworks() {
         return await appDataSource.getRepository(Homework).find()
+    },
+
+    async getHomeworkList<Homework>(atribute: Partial<Homework>) {
+        return await appDataSource.getRepository(Homework).find(atribute)
+    },
+
+    // BELL
+
+    async createBell(schoolId: Number, num: Number, interval: String | undefined) {
+        let bell = new Bell()
+        bell = { _id: undefined, id: (Number((await appDataSource.getRepository(Bell).find({ order: { id: -1 }, take: 1 }))[0]?.id) + 1) || 1, schoolId, num, interval, isEmpty: typeof interval !== 'string' ? true : false}
+        await appDataSource.getRepository(Bell).save(bell)
+    },
+
+    async getBells() {
+        return await appDataSource.getRepository(Bell).find()
+    },
+
+    // async getBellById(schoolId: Number, dayId: Number) {
+    //     return await appDataSource.getRepository(Bell).findOneBy({ schoolId })
+    // },
+
+    async getBellsDay<Bell>(atribute: Partial<Bell>) {
+        return await appDataSource.getRepository(Bell).find(atribute)
+    },
+
+    // async checkDay(schoolId: Number, dayId: Number) {
+    //     return await this.getDayById(schoolId, dayId) != null ? true : false
+    // },
+
+    async deleteBell(schoolId: Number, id: Number) {
+        await appDataSource.getRepository(Bell).delete({ id, schoolId })
+    },
+
+    async editBell<Bell>(schoolId: Number, id: Number, update: Partial<Bell>): Promise<void> {
+        await appDataSource.getRepository(Bell).update({ schoolId, id }, update)
     },
 }
