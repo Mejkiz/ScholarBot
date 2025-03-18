@@ -521,10 +521,77 @@ creator_edit_hw.register(creator_edit_list_lesson)
 
 
 const creator_lists = new Menu<MyContext>("creator-lists")
+    .text("Расписание", async (ctx) => {
+        let userId = ctx.update.callback_query?.from?.id || ctx.chatId
+
+        if (!(await db.checkuser(userId || 0))) return ctx.reply(`У тебя не привязана школа! Что бы привязать напиши в школьную группу с ботом /join`, { reply_parameters: { message_id: ctx.update.callback_query.message?.message_id || 0 } })
+        let userSchool = (await db.getSchoolBy({ id: (await db.getUserById(userId || 0))?.schoolId }))[0]
+        if (userSchool?.id == null) return console.error("err creator-lists")
+        let schoolLessons = (await db.getLessonsDay({ schoolId: userSchool.id })).filter(e => e.isEmpty == false)
+        let studyDays = (await db.getDaysBy({ schoolId: userSchool.id })).filter(e => e.isStudy == true).map(e => e.dayId)
+        let itemList = (await db.getItemsBySchool({ schoolId: userSchool.id }))
+        let itemMap = new Map()
+        for (let i = 0; i < itemList.length; i++) {
+            itemMap.set(itemList[i].id, itemList[i].Name)
+        }
+        let reply = 'Расписание уроков:\n'
+        let arrayData = []
+        for (let i = 0; i < studyDays.length; i++) {
+            let dayItems = schoolLessons.filter(e => e.dayId == studyDays[i]).sort((a, b) => Number(a.num) - Number(b.num));
+            arrayData.push(dayItems.map(e => e.itemId))
+        }
+        for (let i = 0; i < arrayData.length; i++) {
+            reply += `${capitalize(moment().weekday(Number(studyDays[i]) - 1).format('dd'))}.\n`
+            for (let a = 0; a < arrayData[i].length; a++) {
+                reply += `${a + 1}. ${itemMap.get(arrayData[i][a])}\n`
+            }
+            reply += '\n'
+        }
+        await ctx.editMessageText(reply, { reply_markup: back_to_creator_lists })
+    })
+    .text("Д/З", async (ctx) => {
+        let userId = ctx.update.callback_query?.from?.id || ctx.chatId
+
+        if (!(await db.checkuser(userId || 0))) return ctx.reply(`У тебя не привязана школа! Что бы привязать напиши в школьную группу с ботом /join`, { reply_parameters: { message_id: ctx.update.callback_query.message?.message_id || 0 } })
+        let userSchool = (await db.getSchoolBy({ id: (await db.getUserById(userId || 0))?.schoolId }))[0]
+        if (userSchool?.id == null) return console.error("err creator-lists")
+        let itemList = (await db.getItemsBySchool({ schoolId: userSchool.id })).sort((a, b) => {
+            const nameA = a.Name.toUpperCase();
+            const nameB = b.Name.toUpperCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            return 0;
+        });
+        let reply = 'Список домашнего задания:\n'
+        let x = Date.now()
+        for (let i = 0; i < itemList.length; i++) {
+            reply += `${itemList[i].Name}: ${(await db.getlastHomework(userSchool.id, Number(itemList[i].id)))?.text || 'Нету'}\n`
+        }
+        await ctx.editMessageText(reply, { reply_markup: back_to_creator_lists })
+    })
+    .text("Звонков", async (ctx) => {
+        let userId = ctx.update.callback_query?.from?.id || ctx.chatId
+
+        if (!(await db.checkuser(userId || 0))) return ctx.reply(`У тебя не привязана школа! Что бы привязать напиши в школьную группу с ботом /join`, { reply_parameters: { message_id: ctx.update.callback_query.message?.message_id || 0 } })
+        let userSchool = (await db.getSchoolBy({ id: (await db.getUserById(userId || 0))?.schoolId }))[0]
+        if (userSchool?.id == null) return console.error("err creator-lists")
+        let reply = 'Расписание звонков:\n'
+        let bellList = (await db.getBellsDay({ schoolId: userSchool.id })).filter(e => e.isEmpty == false)
+        for (let i = 0; i < bellList.length; i++) {
+            reply += `${i + 1}. ${bellList[i].interval}\n`
+        }
+        await ctx.editMessageText(reply, { reply_markup: back_to_creator_lists })
+    }).row()
     .back('Назад', async ctx => {
         await ctx.editMessageText('Меню:')
     })
 menu.register(creator_lists)
+
+const back_to_creator_lists = new Menu<MyContext>("back-to-creator-lists")
+    .back('Назад', async (ctx) => {
+        await ctx.editMessageText('Списки:')
+    })
+creator_lists.register(back_to_creator_lists)
 
 const creator_get_hw = new Menu<MyContext>("creator-get-hw")
     .back('Назад', async ctx => {
@@ -551,3 +618,5 @@ export default {
         return await ctx.reply("Меню:", { reply_markup: menu });
     }
 }
+
+const capitalize = (s: string) => s && String(s[0]).toUpperCase() + String(s).slice(1)

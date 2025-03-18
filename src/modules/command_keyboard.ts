@@ -67,27 +67,6 @@ const menu_list = new Menu<MyContext>("menu-list")
         for (let i = 0; i < itemList.length; i++) {
             reply += `${itemList[i].Name}: ${(await db.getlastHomework(userSchool.id, Number(itemList[i].id)))?.text || 'Нету'}\n`
         }
-        //let hwList = await db.getHomeworkList({})
-        // let schoolLessons = (await db.getLessonsDay({ schoolId: userSchool.id })).filter(e => e.isEmpty == false)
-        // let studyDays = (await db.getDaysBy({ schoolId: userSchool.id })).filter(e => e.isStudy == true).map(e => e.dayId)
-        // let itemList = (await db.getItemsBySchool({ schoolId: userSchool.id }))
-        // let itemMap = new Map()
-        // for (let i = 0; i < itemList.length; i++) {
-        //     itemMap.set(itemList[i].id, itemList[i].Name)
-        // }
-        // let reply = 'Расписание уроков:\n'
-        // let arrayData = []
-        // for (let i = 0; i < studyDays.length; i++) {
-        //     let dayItems = schoolLessons.filter(e => e.dayId == studyDays[i]).sort((a, b) => Number(a.num) - Number(b.num));
-        //     arrayData.push(dayItems.map(e => e.itemId))
-        // }
-        // for (let i = 0; i < arrayData.length; i++) {
-        //     reply += `${capitalize(moment().weekday(Number(studyDays[i]) - 1).format('dd'))}.\n`
-        //     for (let a = 0; a < arrayData[i].length; a++) {
-        //         reply += `${a + 1}. ${itemMap.get(arrayData[i][a])}\n`
-        //     }
-        //     reply += '\n'
-        // }
         await ctx.editMessageText(reply)
     })
     .submenu("Звонков", "get-list-bell", async ctx => {
