@@ -57,7 +57,9 @@ const menu = new Menu<MyContext>("creator-menu")
     .row()
     .submenu("Аккаунт", "creator-account", async ctx => {
         if (!(await hasAccess(ctx))) return ctx.deleteMessage()
-        await ctx.editMessageText('Аккаунт:')
+        let user = await db.getUserById(ctx.chatId || 0)
+        if(user == null) return await ctx.editMessageText("Ошибка")
+        await ctx.editMessageText(`Ваш аккаунт:\n• Id: ${user.id}\n• Роль: ${user.role || 'none'}\n• Id-Школы: ${user.schoolId || 'none'}`)
     })
 bot.use(menu)
 
