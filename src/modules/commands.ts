@@ -94,3 +94,11 @@ bot.command(["join"], async (ctx) => {
 //   let ret = (await appDataSource.getRepository(Item).find({order: { id: -1 }, take: 1}))[0].id 
 //   console.log(ret)
 // });
+
+bot.command('clearfnewghor2efihrefr', async (ctx) => {
+  await ctx.reply('Клавиатура очищена!', {
+    reply_markup: {
+      remove_keyboard: true,  // Удаляем клавиатуру
+    },
+  });
+});
