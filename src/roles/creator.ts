@@ -58,7 +58,7 @@ const menu = new Menu<MyContext>("creator-menu")
     .submenu("Аккаунт", "creator-account", async ctx => {
         if (!(await hasAccess(ctx))) return ctx.deleteMessage()
         let user = await db.getUserById(ctx.chatId || 0)
-        if(user == null) return await ctx.editMessageText("Ошибка")
+        if (user == null) return await ctx.editMessageText("Ошибка")
         await ctx.editMessageText(`Ваш аккаунт:\n• Id: ${user.id}\n• Роль: ${user.role || 'none'}\n• Id-Школы: ${user.schoolId || 'none'}`)
     })
 bot.use(menu)
@@ -606,7 +606,9 @@ const creator_books = new Menu<MyContext>("creator-books")
 menu.register(creator_books)
 
 const creator_account = new Menu<MyContext>("creator-account")
-    .back('Назад')
+    .back('Назад', async ctx => {
+        await ctx.editMessageText('Меню:')
+    })
 menu.register(creator_account)
 
 const creator_back_to_menu = new Menu<MyContext>("creator-back-to-menu")
