@@ -5,6 +5,7 @@ import { MyContext } from "../misc/connections";
 import db from "../database/func/funct";
 import moment from 'moment';
 import 'moment/locale/ru';
+import 'moment-timezone'
 moment.locale('ru');
 import { all } from "axios";
 let dayList = config.data.dayList
@@ -29,7 +30,7 @@ const menu = new Menu<MyContext>("creator-menu")
     .row()
     .submenu("Д/З на завтра", "creator-get-hw", async ctx => {
         if (!(await hasAccess(ctx))) return ctx.deleteMessage()
-        let day = new Date().getDay() + 1
+        let day = moment().tz(config.timezone).day()+1
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
         const allDays = (await db.getDaysBy({ schoolId: userSchoolId })).filter(e => e.isStudy == true).map(e => Number(e.dayId))
         let hwDay;
@@ -436,7 +437,7 @@ const creator_edit_hw = new Menu<MyContext>("creator-edit-hw")
     .dynamic(async (ctx: MyContext) => {
         const range = new MenuRange<MyContext>();
         let userSchoolId = (await db.getUserById(ctx.chatId || 0))?.schoolId || 0
-        let day = new Date().getDay()
+        let day = moment().tz(config.timezone).day()
         const allDays = (await db.getDaysBy({ schoolId: userSchoolId })).filter(e => e.isStudy == true).map(e => e.dayId)
         let lessonList;
         if (!allDays.includes(day)) {
