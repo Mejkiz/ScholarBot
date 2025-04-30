@@ -1,4 +1,5 @@
 import { Menu, MenuRange } from "@grammyjs/menu";
+import { config } from "../config";
 import { MyContext } from "../misc/connections";
 import db from "../database/func/funct";
 import utils from '../misc/utils'
@@ -26,10 +27,10 @@ bot.command("start", async (ctx) => {
 });
 
 
-bot.command("give", async (ctx) => {
-  if (!ctx.config.isDeveloper) return
-  console.log(await db.createuser((await ctx.getAuthor()).user, "creator", 1))
-});
+// bot.command("give", async (ctx) => {
+//   if (!ctx.config.isDeveloper) return
+//   console.log(await db.createuser((await ctx.getAuthor()).user, "creator", 1))
+// });
 
 bot.command("admin_cmd", async (ctx) => {
   if (!ctx.config.isDeveloper) return
@@ -44,7 +45,7 @@ bot.command(["hw", "dz", "дз", "homework"], async (ctx) => {
   if (!(await db.checkuser(userId || 0))) return ctx.reply(`У тебя не привязана школа! Что бы привязать напиши в школьную группу с ботом /join`, { reply_parameters: { message_id: ctx.msg.message_id } })
   let userSchoolId = (await db.getUserById(userId || 0))?.schoolId || null
   if (userSchoolId == null) return ctx.reply("У тебя нет доступа к этому боту!");
-  let day = new Date().getDay() + 1
+  let day = moment().tz(config.timezone).day() + 1
   const allDays = (await db.getDaysBy({ schoolId: userSchoolId })).filter(e => e.isStudy == true).map(e => Number(e.dayId))
   let hwDay;
   if (!allDays.includes(day) || hwDay == Math.max.apply(null, allDays)) {
@@ -93,4 +94,12 @@ bot.command(["join"], async (ctx) => {
 // bot.command("test", async (ctx) => {
 //   let ret = (await appDataSource.getRepository(Item).find({order: { id: -1 }, take: 1}))[0].id 
 //   console.log(ret)
+// });
+
+// bot.command('clearfnewghor2efihrefr', async (ctx) => {
+//   await ctx.reply('Клавиатура очищена!', {
+//     reply_markup: {
+//       remove_keyboard: true,  // Удаляем клавиатуру
+//     },
+//   });
 // });
