@@ -89,14 +89,9 @@ bot.command(["join"], async (ctx) => {
   }
   else return ctx.reply('err')
   await ctx.reply(`Успешно, теперь тебе доступны команды бота!`, { reply_parameters: { message_id: ctx.msg.message_id } })
-})
+});
 
-// bot.command("test", async (ctx) => {
-//   let ret = (await appDataSource.getRepository(Item).find({order: { id: -1 }, take: 1}))[0].id 
-//   console.log(ret)
-// });
-
-bot.command('clearfnewghor2efihrefr', async (ctx) => {
+bot.command(['clearfnewghor2efihrefr'', async (ctx) => {
   if (!ctx.config.isDeveloper) return
    await ctx.reply('Клавиатура очищена!', {
     reply_markup: {
@@ -105,7 +100,13 @@ bot.command('clearfnewghor2efihrefr', async (ctx) => {
   });
 });
 
-bot.command('eval', async (ctx) => {
+bot.command(['eval'], async (ctx) => {
   if (!ctx.config.isDeveloper) return
   await ctx.reply(`${await eval(ctx.message.split(' ').slice(1).join(' '))}`)
 });
+
+
+// bot.command("test", async (ctx) => {
+//   let ret = (await appDataSource.getRepository(Item).find({order: { id: -1 }, take: 1}))[0].id 
+//   console.log(ret)
+// });
