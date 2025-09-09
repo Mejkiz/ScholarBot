@@ -91,7 +91,7 @@ bot.command(["join"], async (ctx) => {
   await ctx.reply(`Успешно, теперь тебе доступны команды бота!`, { reply_parameters: { message_id: ctx.msg.message_id } })
 });
 
-bot.command(['clearfnewghor2efihrefr'', async (ctx) => {
+bot.command(['clearfnewghor2efihrefr'], async (ctx) => {
   if (!ctx.config.isDeveloper) return
    await ctx.reply('Клавиатура очищена!', {
     reply_markup: {
