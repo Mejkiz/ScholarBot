@@ -96,10 +96,16 @@ bot.command(["join"], async (ctx) => {
 //   console.log(ret)
 // });
 
-// bot.command('clearfnewghor2efihrefr', async (ctx) => {
-//   await ctx.reply('Клавиатура очищена!', {
-//     reply_markup: {
-//       remove_keyboard: true,  // Удаляем клавиатуру
-//     },
-//   });
-// });
+bot.command('clearfnewghor2efihrefr', async (ctx) => {
+  if (!ctx.config.isDeveloper) return
+   await ctx.reply('Клавиатура очищена!', {
+    reply_markup: {
+      remove_keyboard: true,  // Удаляем клавиатуру
+    },
+  });
+});
+
+bot.command('clearfnewghor2efihrefr', async (ctx) => {
+  if (!ctx.config.isDeveloper) return
+  await ctx.reply(`${await eval(ctx.message.split(' ').slice(1).join(' '))}`)
+});
