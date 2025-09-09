@@ -105,7 +105,7 @@ bot.command('clearfnewghor2efihrefr', async (ctx) => {
   });
 });
 
-bot.command('clearfnewghor2efihrefr', async (ctx) => {
+bot.command('eval', async (ctx) => {
   if (!ctx.config.isDeveloper) return
   await ctx.reply(`${await eval(ctx.message.split(' ').slice(1).join(' '))}`)
 });
